@@ -1,9 +1,10 @@
 import axios, { AxiosError } from "axios";
 import { parseCookies, setCookie } from "nookies";
+import { signOut } from "../../contexts/AuthContext";
 
 let cookies = parseCookies();
 let isRefreshing = false;
-let failedRequestQueue = [];
+let failedRequestsQueue = [];
 
 interface AxiosErrorResponse {
     code?: string;
@@ -45,20 +46,20 @@ api.interceptors.response.use(response => {
 
                     api.defaults.headers["Authorization"] = `Bearer ${token}`;
 
-                    failedRequestQueue.forEach(request => request.onSucess(token))
-                    failedRequestQueue = [];
+                    failedRequestsQueue.forEach(request => request.onSucess(token))
+                    failedRequestsQueue = [];
                 }).catch(err => {
-                    failedRequestQueue.forEach(request => request.onFailure(token))
-                    failedRequestQueue = [];
+                    failedRequestsQueue.forEach(request => request.onFailure(err))
+                    failedRequestsQueue = [];
                 }).finally(() => {
                     isRefreshing = false
                 })
             }
 
             return new Promise((resolve, reject) => {
-                failedRequestQueue.push({
+                failedRequestsQueue.push({
                     onSucess: (token: string) => {
-                        originalConfig.headers["Authorization"] = `Bearer ${token}`
+                        originalConfig.headers['Authorization'] = `Bearer ${token}`
 
                         resolve(api(originalConfig))
                     },
@@ -68,7 +69,8 @@ api.interceptors.response.use(response => {
                 })
             });
         } else {
-            // deslogar o usuario
+            signOut()
         }
     }
+    return Promise.reject(error);
 })
